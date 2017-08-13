@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import time
+import time,sys,getopt
 from tensorflow.examples.tutorials.mnist import input_data
 
 from keras.models import Sequential
@@ -61,7 +61,7 @@ class GAN(object):
         DM.add(model)
         DM.compile(loss='binary_crossentropy', optimizer=optimizer,metrics=['accuracy'])
         return DM
-    def train(self,data,train_steps=2000):
+    def train(self,data,train_steps=2000,savename = 'test',plot = True):
         for train_step in range(train_steps):
             noise = np.random.uniform(-1.0, 1.0, size=[self.batch_size, 100])
             x_batch = data[np.random.randint(0,data.shape[0],[self.batch_size]),:,:,:]
@@ -75,8 +75,9 @@ class GAN(object):
             #noise = np.random.uniform(-1.0, 1.0, size=[self.batch_size, 100])
             a_loss = self.AM.train_on_batch(noise, y)
             if (train_step+1) % 10 == 0:
-                self.plotFake(4)
-                self.save_weights('test')
+                if plot:
+                    self.plotFake(4)
+                self.save_weights(savename)
                 print('{}:  D:[loss:{}  acc:{}]   A:[loss:{}  acc:{}]'.format(train_step+1,d_loss[0],d_loss[1],a_loss[0],a_loss[1]))
 
     def plotFake(self,num=16):
@@ -98,6 +99,9 @@ class GAN(object):
     def load_weights(self,name):
         self.generator.load_weights(name+'.generator')
         self.discriminator.load_weights(name+'.discriminator')
+    
+    def __str__(self):
+        return str(self.generator.summary())+'\n\n'+str(self.discriminator.summary())
 
 def plotImgs(imgs):
     num = len(imgs)
@@ -109,19 +113,45 @@ def plotImgs(imgs):
         plt.axis('off')
     plt.tight_layout()
     plt.show()
+
+
+    
+if __name__=="__main__":      
+    optiondata = '''
+    
+    -R                 run training.
+    
+    -i [nums]          train iter (2000).
+    -r [filename]      read weight filename.
+    -w [filename]      wright weight filename. default:`read weight filename` or 'test'
+    
+    -h                 help
+    '''
+    opts, args = getopt.getopt(sys.argv[1:], "hRr:i:w:")
+    opts = dict(opts)
+    if '-h' in opts:
+        print(optiondata)
+        sys.exit()
+    if '-R' in opts:
+        x_train = input_data.read_data_sets("mnist",one_hot=True).train.images
+        x_train = x_train.reshape([len(x_train),28,28,1])
         
-x_train = input_data.read_data_sets("mnist",one_hot=True).train.images
-x_train = x_train.reshape([len(x_train),28,28,1])
-
-gan = GAN()
-
-try:
-    gan.load_weights('test')
-    print('[Message] LOAD weight name `{}`'.format('test'))
-except Exception:
-    print('[Message] random init weight.')
-    pass
-gan.train(x_train)
+        gan = GAN()
+        loadweightname = opts.get('-r') 
+        if loadweightname:
+            try:
+                gan.load_weights(loadweightname)
+                print('[Message] LOAD weight name `{}`'.format(loadweightname))
+            except Exception:
+                print('[Warning] `{}`data does not exists.'.format(loadweightname))
+                pass
+        saveweightname = opts.get('-w') if opts.get('-w') else 'temp' if not loadweightname else loadweightname
+        trainiter = int(opts.get('-i')) if opts.get('-i') else 2000
+        gan.train(x_train, train_steps=trainiter, savename=saveweightname,plot = False)
+    else:# spyder debuging
+        x_train = input_data.read_data_sets("mnist",one_hot=True).train.images
+        x_train = x_train.reshape([len(x_train),28,28,1])
+        gan = GAN()
 
 
 
