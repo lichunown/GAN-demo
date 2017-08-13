@@ -76,6 +76,7 @@ class GAN(object):
             a_loss = self.AM.train_on_batch(noise, y)
             if (train_step+1) % 10 == 0:
                 self.plotFake(4)
+                self.save_weights('test')
                 print('{}:  D:[loss:{}  acc:{}]   A:[loss:{}  acc:{}]'.format(train_step+1,d_loss[0],d_loss[1],a_loss[0],a_loss[1]))
 
     def plotFake(self,num=16):
