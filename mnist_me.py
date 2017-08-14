@@ -2,7 +2,6 @@
 import numpy as np
 import time,sys,getopt
 from tensorflow.examples.tutorials.mnist import input_data
-
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten, Reshape
 from keras.layers import Conv2D, Conv2DTranspose, UpSampling2D
@@ -47,17 +46,19 @@ class GAN(object):
         model.add(Flatten())
         model.add(Dense(1,activation='sigmoid'))
         return model
+    
     def _AM_model(self,generator,discriminator):
         optimizer = RMSprop(lr=0.001, decay=1e-6)
         AM = Sequential()
         AM.add(generator)
+        discriminator.trainable = False
         AM.add(discriminator)
         AM.compile(loss='binary_crossentropy', optimizer=optimizer,metrics=['accuracy'])
         return AM
         
     def _discriminator_model(self,model):
         DM = Sequential()
-        optimizer = RMSprop(lr=0.002, decay=1e-6)
+        optimizer = RMSprop(lr=0.001, decay=1e-6)
         DM.add(model)
         DM.compile(loss='binary_crossentropy', optimizer=optimizer,metrics=['accuracy'])
         return DM
@@ -69,10 +70,12 @@ class GAN(object):
             x = np.concatenate((x_batch, x_fake))
             y = np.ones([2*self.batch_size, 1])
             y[self.batch_size:, :] = 0
+            self.discriminator.trainable = True
             d_loss = self.DM.train_on_batch(x, y)
             
             y = np.ones([self.batch_size, 1])
             #noise = np.random.uniform(-1.0, 1.0, size=[self.batch_size, 100])
+            self.discriminator.trainable = False
             a_loss = self.AM.train_on_batch(noise, y)
             if (train_step+1) % 10 == 0:
                 if plot:
